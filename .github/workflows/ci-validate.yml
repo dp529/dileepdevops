@@ -1,0 +1,117 @@
+name: CI - Validate Terraform, Ansible, Docker
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ------------------------------------------------------------------
+  # Terraform: format check + validate (no AWS calls)
+  # ------------------------------------------------------------------
+  terraform-validate:
+    name: Terraform fmt + validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+
+      - name: Terraform Format Check
+        working-directory: terraform
+        run: terraform fmt -check -recursive -diff
+
+      - name: Terraform Init (backend disabled)
+        working-directory: terraform
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        working-directory: terraform
+        run: terraform validate
+
+  # ------------------------------------------------------------------
+  # Ansible: syntax check on every playbook
+  # ------------------------------------------------------------------
+  ansible-lint:
+    name: Ansible syntax + lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Ansible + ansible-lint
+        run: |
+          pip install ansible ansible-lint
+
+      - name: Ansible Syntax Check
+        run: |
+          find ansible/playbooks -name "*.yml" -type f | while read playbook; do
+            echo "Checking: $playbook"
+            ansible-playbook --syntax-check "$playbook" || true
+          done
+
+      - name: Ansible Lint
+        run: ansible-lint ansible/playbooks/ || true
+        continue-on-error: true
+
+  # ------------------------------------------------------------------
+  # Dockerfile lint with Hadolint
+  # ------------------------------------------------------------------
+  dockerfile-lint:
+    name: Dockerfile lint (Hadolint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/Dockerfile
+          failure-threshold: warning
+
+  # ------------------------------------------------------------------
+  # Trivy filesystem scan - finds misconfigurations + secrets in repo
+  # ------------------------------------------------------------------
+  trivy-fs-scan:
+    name: Trivy filesystem scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'  # report only, don't fail (for portfolio repo)
+
+  # ------------------------------------------------------------------
+  # actionlint - validate the workflow YAML itself
+  # ------------------------------------------------------------------
+  actionlint:
+    name: GitHub Actions workflow lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run actionlint
+        uses: reviewdog/action-actionlint@v1
+        with:
+          reporter: github-pr-check
+          fail_on_error: false

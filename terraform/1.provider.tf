@@ -10,9 +10,11 @@ terraform {
       source  = "hashicorp/aws"
     }
   }
-  backend "s3" {
-    bucket = "dileep5290202125"
-    key    = "ansible.tfstate"
-    region = "us-east-1"
-  }
+  # Uncomment to enable S3 remote state. Your IAM user must have:
+  #   s3:GetObject, s3:PutObject, s3:ListBucket on the target bucket
+  # backend "s3" {
+  #   bucket = "YOUR_TERRAFORM_STATE_BUCKET"
+  #   key    = "ansible.tfstate"
+  #   region = "us-east-1"
+  # }
 }

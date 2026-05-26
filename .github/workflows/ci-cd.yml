@@ -1,10 +1,19 @@
-name: CI/CD Pipeline - Build, Scan, Deploy to EKS via ArgoCD
+name: CD Reference - Build, Scan, Deploy to EKS via ArgoCD (Manual Only)
+
+# This is a REFERENCE ARCHITECTURE for a full GitOps CD pipeline.
+# It does not run automatically because it depends on real infrastructure:
+#   - SonarQube server with SONAR_TOKEN + SONAR_HOST_URL secrets
+#   - AWS account with OIDC role configured (AWS_OIDC_ROLE_ARN secret)
+#   - Amazon ECR repository
+#   - A separate GitOps manifests repo (GITOPS_REPO_TOKEN secret)
+#   - ArgoCD watching the GitOps repo and syncing to Amazon EKS
+#
+# To run end-to-end, configure the required secrets in repo Settings -> Secrets,
+# then trigger manually from the Actions tab.
+#
+# For day-to-day validation that runs on every push, see ci-validate.yml
 
 on:
-  push:
-    branches: [main, dev]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 env:
