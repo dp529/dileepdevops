@@ -1,0 +1,53 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+
+# Sensitive values - keep example, ignore real
+terraform.tfvars
+*.auto.tfvars
+!terraform.tfvars.example
+!*.tfvars.example
+
+# Ansible
+*.retry
+.vault_pass
+vault_password.txt
+host_vars/*/vault.yml
+
+# SSH keys / Certs
+*.pem
+*.key
+*.ppk
+*.crt
+*.p12
+*.pfx
+id_rsa*
+
+# AWS / Cloud credentials
+.aws/
+credentials
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Python (in case any test scripts get added)
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+.venv/

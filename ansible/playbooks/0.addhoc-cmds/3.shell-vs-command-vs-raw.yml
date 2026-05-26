@@ -1,0 +1,80 @@
+#We cannot use && > >> || with commands module but works with SHELL module.
+Raw module is completely different from the other two modules and it does not push any 
+python script to the remote node. It runs ping process through sshd process, as above. 
+It could be used on devices like IoT or networking devices. 
+
+Shell module runs the command(ping) inside a shell, providing piping("|"), 
+redirection(">") and operators("&&", "||") . 
+Shell module is susceptible to command injection/shell injection. 
+
+In contrast to shell module, command module runs the command(ping) directly with python 
+script. Unlike shell module, running commands can not use pipes and redirections. 
+It can be said that command module is more secure than shell module.
+---
+- name: Testing SHELL & COMMAND & RAW Modules
+  hosts: testserver01
+  become: true
+  become_user: root
+  tasks:
+    - name: Run SHELL Module Using >
+      shell: > # Consider everything below as single line.
+        echo "Welcome
+        To DevSecOps Class
+        Batch Number B42 {{ ansible_env.HOME }}"
+      tags:
+      - shell
+    - name: Run SHELL Module Using |
+      shell: | # Consider everything below as individual lines.
+        echo "Welcome
+        To DevSecOps Class
+        Batch Number B42 {{ ansible_env.HOME }}"
+      tags:
+      - shell
+
+    - name: Run  Env Using SHELL Variables
+      shell: env && df -h && free
+      tags:
+      - shell
+
+    - name: Testing Shell Module With Redirectors
+      shell: "{{item}}"
+      with_items:
+      - "free -h > /tmp/free"
+      - "df -h > /tmp/df"
+      ignore_errors: yes
+      tags:
+      - shell
+
+    - name: Run COMMAND Module
+      command: >
+        echo "Welcome
+        To DevSecOps Class
+        Batch Number B42 {{ ansible_env.HOME }}"
+      tags:
+      - command
+    - name: Run  Env Using COMMAND Variables
+      command: env && df -h && free
+      ignore_errors: yes
+      tags:
+      - command
+    - name: Testing Command Modules
+      command: "{{item}}"
+      with_items:
+      - "free -h > /tmp/free"
+      - "df -h > /tmp/df"
+      ignore_errors: yes
+      tags:
+      - command
+
+    - name: Run RAW Module
+      raw: >
+        echo "Welcome
+        To DevSecOps Class
+        Batch Number B42 {{ ansible_env.HOME }}"
+      tags:
+      - raw   
+
+    - name: Run  Env Using RAW Variables
+      raw: env && df -h && free 
+      tags:
+      - raw 

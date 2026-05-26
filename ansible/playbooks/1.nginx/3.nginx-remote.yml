@@ -1,0 +1,92 @@
+#git clone -b DevSecOpsB40 https://github.com/mavrick202/dockertest1.git /tmp/nginxfiles
+---
+- name: Play For Installing Nginx On WebServers
+  hosts: pvt
+  gather_facts: yes
+  become: yes
+  become_user: root
+  serial: 3
+  tasks:
+  - name: Check Nginx Exists
+    shell: nginx -v
+    register: nginx_output
+    ignore_errors: yes
+
+  - name: Perform apt update & Install basic packages
+    shell: apt update && apt install -y unzip jq net-tools stress 
+    when: (nginx_output.rc != 0 and ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] == "20.04")
+    timeout: 30
+    tags:
+     - tools
+
+  - name: Install Nginx Webserver Application
+    apt:
+      name: nginx
+      state: latest
+      update_cache: yes
+    when: (nginx_output.rc != 0 and ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] == "20.04")
+    timeout: 30
+
+  - name: Start Nginx Service
+    service:
+      name: nginx
+      state: started
+    when: (nginx_output.rc != 0 and ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] == "20.04")
+  tags:
+  - nginx
+
+- name: Play For Copying Files Remotly On Client
+  hosts: testserver01:testserver02:testserver03
+  become: yes
+  become_user: root
+  tags: files
+  tasks:
+  - name: Clone Git Repo to {{ inventory_hostname }}
+    shell: cd /tmp && rm -rf nginxfiles && git clone -b DevSecOpsB42 --single-branch https://github.com/mavrick202/dockertest1.git nginxfiles
+    tags:
+      - clone 
+
+  - name: Copy All Webserver Files to {{ inventory_hostname }}
+    copy:   
+      src: "{{ item }}"
+      dest: /var/www/html/
+      owner: root
+      group: root
+      mode: '0644'
+      remote_src: yes
+    with_items:
+    - /tmp/nginxfiles/index.html
+    - /tmp/nginxfiles/scorekeeper.js
+    - /tmp/nginxfiles/style.css
+    - /tmp/nginxfiles/aboutus.html
+    - /tmp/nginxfiles/contact.html
+    - /tmp/nginxfiles/orders.html
+    when: (ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] == "20.04")
+
+- name: Download & Install Terraform Latest Version
+  hosts: testserver01:testserver02:testserver03
+  become: yes
+  become_user: root
+  tags: terraform
+  tasks:
+  - name: Check Terraform Latest Version
+    shell: curl -s https://api.github.com/repos/hashicorp/terraform/releases/latest | jq -r '.tag_name' | tr -d 'v'
+    register: terraform_version
+
+  - name: Print Terraform Version
+    debug:
+      var: terraform_version.stdout
+
+  - name: Check Terraform Exists
+    shell: terraform version
+    register: terraform_status_output
+    ignore_errors: yes
+
+  - name: Install Terraform CLI
+    shell: |
+      sudo rm -rf terraform.zip && sudo rm -rf LICENSE.txt  && sudo rm -rf /usr/local/bin/terraform
+      curl "https://releases.hashicorp.com/terraform/{{terraform_version.stdout}}/terraform_{{terraform_version.stdout}}_linux_amd64.zip" -o "terraform.zip"
+      unzip terraform.zip
+      mv terraform /usr/local/bin
+      sudo terraform version
+    when: terraform_status_output.rc != 0

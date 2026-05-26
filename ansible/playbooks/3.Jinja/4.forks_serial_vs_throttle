@@ -1,0 +1,52 @@
+https://www.redhat.com/sysadmin/faster-ansible-playbook-execution
+forks: Ansible uses batches for task execution, which are controlled by a parameter 
+called forks. The default value for forks is 5, which means Ansible executes a task 
+on the first five hosts, waits for the task to complete, and then takes the next 
+batch of five hosts, and so on. Once all hosts finish the task, Ansible moves to the 
+next tasks with a batch of five hosts again.
+[defaults]
+forks=50
+ansible-playbook site.yaml --forks 50
+
+serial:
+Its applied at the play-level not at task level.
+
+You can set a number, a percentage, or a list of numbers of hosts you want to manage 
+at a time with serial. Ansible completes the play on the specified number or percentage 
+of hosts before starting the next batch of hosts.
+
+Example:
+- name: Play For Installing Nginx On WebServers
+  hosts: pvt
+  gather_facts: yes
+  become: yes
+  become_user: root
+  serial: 1 or "25%"
+  (or)
+  serial: #Play runs on one host, then 5 and then on 10.
+  - 1
+  - 5
+  - 10
+
+throttle:
+The throttle keyword limits the number of workers for a particular task. 
+It can be set at the block and task level. Use throttle to restrict tasks that 
+may be CPU-intensive or restart database servers one by one:
+
+handlers:
+- name: Restart MySQL
+  throttle: 1
+  service:
+    name: mysql
+    state: restarted
+
+
+order:
+The order keyword controls the order in which hosts are run. 
+Possible values for order are:
+inventory: (default) The order provided by the inventory for the selection requested (see note below)
+reverse_inventory: The same as above, but reversing the returned list.
+sorted:     Sorted alphabetically sorted by name
+reverse_sorted:     Sorted by name in reverse alphabetical order
+shuffle: Randomly ordered on each run
+
